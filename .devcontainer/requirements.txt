@@ -12,6 +12,7 @@ openai
 python-dotenv
 
 # 웹 서비스 (Day 3)
+flask
 streamlit
 gradio
 

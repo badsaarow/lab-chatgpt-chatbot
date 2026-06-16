@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flask Todo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <p class="eyebrow">Flask Web App</p>
+        <h1>Todo</h1>
+        <p class="summary">남은 일 {{ remaining }}개</p>
+      </header>
+
+      <form class="add-form" action="{{ url_for('add_todo') }}" method="post">
+        <input
+          type="text"
+          name="title"
+          placeholder="할 일을 입력하세요"
+          autocomplete="off"
+          autofocus
+          required
+        >
+        <button type="submit">추가</button>
+      </form>
+
+      <section class="todo-list" aria-label="Todo list">
+        {% if todos %}
+          {% for todo in todos %}
+            <article class="todo-item{% if todo.done %} is-done{% endif %}">
+              <form action="{{ url_for('toggle_todo', todo_id=todo.id) }}" method="post">
+                <button
+                  class="check"
+                  type="submit"
+                  aria-label="{% if todo.done %}미완료로 변경{% else %}완료로 변경{% endif %}"
+                >
+                  {% if todo.done %}✓{% endif %}
+                </button>
+              </form>
+              <span class="title">{{ todo.title }}</span>
+              <form action="{{ url_for('delete_todo', todo_id=todo.id) }}" method="post">
+                <button class="delete" type="submit" aria-label="삭제">삭제</button>
+              </form>
+            </article>
+          {% endfor %}
+        {% else %}
+          <p class="empty">아직 할 일이 없습니다.</p>
+        {% endif %}
+      </section>
+
+      {% if todos %}
+        <form action="{{ url_for('clear_completed') }}" method="post">
+          <button class="clear" type="submit">완료 항목 지우기</button>
+        </form>
+      {% endif %}
+    </main>
+  </body>
+</html>
