@@ -12,6 +12,7 @@ from openai import OpenAI
 load_dotenv()
 client = OpenAI()
 MODEL = "gpt-6-luna"   # 호출마다 reasoning_effort="none" 을 함께 넣는다 (교재 5.3)
+MAX_TURNS = 3          # 모델에 전달할 최대 대화 턴 수
 
 # 상태
 history = []
@@ -30,6 +31,10 @@ def reset():
 def chat(message: str, temperature: float = 0.3) -> str:
     """사용자 메시지에 대한 챗봇 응답 생성."""
     global history, usage_log, SYSTEM
+
+    # 새 턴을 추가하기 전에 오래된 턴을 제거해 최근 10턴만 유지한다.
+    if len(history) >= MAX_TURNS * 2:
+        del history[:2]
     
     history.append({"role": "user", "content": message})
     
