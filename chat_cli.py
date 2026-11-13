@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """
-멀티턴 채팅 CLI — OpenAI 기반 대화 메모리 챗봇
+멀티턴 채팅 CLI — LangChain 기반 대화 메모리 챗봇
 Usage: python chat_cli.py
 명령어: /reset (초기화), /quit (종료)
 """
 
 from dotenv import load_dotenv
-from openai import OpenAI
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 # 초기화
 load_dotenv()
-client = OpenAI()
 MODEL = "gpt-6-luna"   # 호출마다 reasoning_effort="none" 을 함께 넣는다 (교재 5.3)
 MAX_TURNS = 3          # 모델에 전달할 최대 대화 턴 수
+llm = ChatOpenAI(model=MODEL, reasoning_effort="none", temperature=0.3)
 
 # 상태
 history = []
@@ -30,25 +31,32 @@ def reset():
 
 def chat(message: str, temperature: float = 0.3) -> str:
     """사용자 메시지에 대한 챗봇 응답 생성."""
-    global history, usage_log, SYSTEM
+    global history, usage_log
 
-    # 새 턴을 추가하기 전에 오래된 턴을 제거해 최근 10턴만 유지한다.
+    # 새 턴을 추가하기 전에 오래된 턴을 제거해 최근 MAX_TURNS 턴만 유지한다.
     if len(history) >= MAX_TURNS * 2:
         del history[:2]
-    
+
     history.append({"role": "user", "content": message})
-    
-    resp = client.chat.completions.create(
-        model=MODEL,
-        reasoning_effort="none",
-        temperature=temperature,
-        messages=[{"role": "system", "content": SYSTEM}, *history],
-    )
-    
-    answer = resp.choices[0].message.content
+
+    # 노트북의 변환 루프와 같이 dict history를 LangChain 메시지로 바꾼다.
+    msgs = [SystemMessage(content=SYSTEM)]
+    for item in history:
+        cls = HumanMessage if item["role"] == "user" else AIMessage
+        msgs.append(cls(content=item["content"]))
+
+    resp = llm.invoke(msgs, temperature=temperature)
+    answer = resp.content
     history.append({"role": "assistant", "content": answer})
-    usage_log.append(resp.usage.total_tokens)
-    
+    usage = getattr(resp, "usage_metadata", None) or {}
+    total_tokens = usage.get("total_tokens")
+    if total_tokens is None:
+        # LangChain/OpenAI 조합에 따라 원본 usage 정보가 여기에 실릴 수 있다.
+        metadata = getattr(resp, "response_metadata", None) or {}
+        total_tokens = metadata.get("token_usage", {}).get("total_tokens")
+    if total_tokens is not None:
+        usage_log.append(total_tokens)
+
     return answer
 
 
